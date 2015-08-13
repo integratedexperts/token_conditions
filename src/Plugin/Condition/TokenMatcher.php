@@ -3,6 +3,8 @@
 /**
  * @file
  * Contains \Drupal\node\Plugin\Condition\TokenMatcher.
+ *
+ * @todo Is there a way to request a generic ContentEntity context?
  */
 
 namespace Drupal\token_conditions\Plugin\Condition;
@@ -20,9 +22,6 @@ use Drupal\Core\Entity\Entity;
  * @Condition(
  *   id = "token_matcher",
  *   label = @Translation("Token Matcher"),
- *   context = {
- *     "node" = @ContextDefinition("entity:node", label = @Translation("Node"))
- *   }
  * )
  *
  */
@@ -85,22 +84,24 @@ class TokenMatcher extends ConditionPluginBase implements ContainerFactoryPlugin
       '#description' => t(''),
       '#default_value' => $this->configuration['check_empty'],
     );
+    $invisible_state = array(
+      'invisible' => array(
+        ':input[name="visibility[token_matcher][check_empty]"]' => array('checked' => TRUE),
+        )
+    );
     $form['value_match'] = array(
       '#title' => $this->t('Value String'),
       '#type' => 'textfield',
       '#default_value' => $this->configuration['value_match'],
       '#description' => $this->t('Enter string to check against. This can also contain tokens'),
+      '#states' => $invisible_state,
     );
     $form['use_regex'] = array(
       '#type' => 'checkbox',
       '#title' => t('Use regex match'),
       '#description' => t(''),
       '#default_value' => $this->configuration['use_regex'],
-      '#states' => array(
-        'invisible' => array(
-          ':input[name="settings[check_empty]"]' => array('checked' => TRUE),
-        ),
-      ),
+      '#states' => $invisible_state,
     );
     return parent::buildConfigurationForm($form, $form_state);
   }
@@ -126,6 +127,13 @@ class TokenMatcher extends ConditionPluginBase implements ContainerFactoryPlugin
     $token_service = \Drupal::token();
     $token_replaced = $token_service->replace($this->configuration['token_match'], $token_data);
     $value_replace = $token_service->replace($this->configuration['value_match'], $token_data);
+    if ($this->configuration['check_empty']) {
+      return empty($token_replaced);
+    }
+    if ($this->configuration['use_regex']){
+      return (boolean)preg_match($value_replace, $token_replaced);
+    }
+
     return $token_replaced == $value_replace;
   }
 
@@ -138,8 +146,12 @@ class TokenMatcher extends ConditionPluginBase implements ContainerFactoryPlugin
    * {@inheritdoc}
    */
   public function submitConfigurationForm(array &$form, FormStateInterface $form_state) {
-    $this->configuration['token_match'] = $form_state->getValue('token_match');
-    $this->configuration['value_match'] = $form_state->getValue('value_match');
+    $user_values = $form_state->getValues();
+    foreach ($user_values as $key => $value) {
+      if ($key != 'negate') {
+        $this->configuration[$key] = $value;
+      }
+    }
     parent::submitConfigurationForm($form, $form_state);
   }
 
