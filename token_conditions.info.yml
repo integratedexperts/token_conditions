@@ -1,4 +1,4 @@
-name: token_conditions
+name: Token Conditions
 type: module
 description: Creates conditions for Blocks based on Tokens
 core: 8.x
