@@ -19,7 +19,10 @@ use Drupal\Core\Entity\Entity;
  *
  * @Condition(
  *   id = "token_matcher",
- *   label = @Translation("Token Matcher")
+ *   label = @Translation("Token Matcher"),
+ *   context = {
+ *     "node" = @ContextDefinition("entity:node", label = @Translation("Node"))
+ *   }
  * )
  *
  */
@@ -153,35 +156,42 @@ class TokenMatcher extends ConditionPluginBase implements ContainerFactoryPlugin
   }
 
   /**
+   * Get an array of token data.
+   *
    * @return array
+   *  keys - entity types
+   *  values - entities
    */
   protected function getTokenData() {
     $token_data = [];
     $allEntities = \Drupal::entityManager()->getDefinitions();
     foreach ($allEntities as $entity_type => $entity_type_info) {
       if ($entity_type_info instanceof ContentEntityType) {
-        if ($entity = $this->getContextValue($entity_type)) {
+        if ($entity = $this->getPseudoContextValue($entity_type)) {
           $token_type = $this->getTokenType($entity_type_info);
+          $token_data[$token_type] = $entity;
         }
-
-
-      }
-    }
-
-    $contexts = $this->getContexts();
-
-    $token_data = [];
-    $attributes = \Drupal::request()->attributes->all();
-    foreach ($attributes as $attribute_key => $attribute) {
-      if (is_object($attribute) && $attribute instanceof ContentEntityInterface) {
-        /**
-         * @var ContentEntityInterface $entity ;
-         */
-        $entity = $attribute;
-        $token_data[$this->getTokenType($entity)] = $entity;
       }
     }
     return $token_data;
   }
 
+  /**
+   * Get Entity by type from Request.
+   *
+   * This is a stop gap to until there is better way to get the values from context.
+   * @param $entity_type
+   *
+   * @return mixed
+   */
+  protected function getPseudoContextValue($entity_type) {
+    $attributes = \Drupal::request()->attributes;
+    if ($attributes->has($entity_type)) {
+      $entity_attribute = $attributes->get($entity_type);
+      if ($entity_attribute instanceof ContentEntityInterface) {
+        return $entity_attribute;
+      }
+    }
+    return FALSE;
+  }
 }
