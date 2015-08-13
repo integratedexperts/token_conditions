@@ -1,0 +1,6 @@
+name: token_conditions
+type: module
+description: Creates conditions for Blocks based on Tokens
+core: 8.x
+package: Token
+
