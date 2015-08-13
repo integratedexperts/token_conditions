@@ -37,8 +37,6 @@ class TokenMatcher extends ConditionPluginBase implements ContainerFactoryPlugin
   /**
    * Creates a new TokenMatcher instance.
    *
-   * @param \Drupal\Core\Entity\EntityStorageInterface $entity_storage
-   *   The entity storage.
    * @param array $configuration
    *   The plugin configuration, i.e. an array with configuration values keyed
    *   by configuration option name. The special key 'context' may be used to
@@ -103,6 +101,14 @@ class TokenMatcher extends ConditionPluginBase implements ContainerFactoryPlugin
       '#default_value' => $this->configuration['use_regex'],
       '#states' => $invisible_state,
     );
+    if (\Drupal::moduleHandler()->moduleExists('token')) {
+      $form['token_tree'] = array(
+        '#theme' => 'token_tree',
+        '#token_types' => $this->getContentTokenTypes(),
+        '#dialog' => FALSE,
+        '#weight' => 100,
+      );
+    }
     return parent::buildConfigurationForm($form, $form_state);
   }
 
@@ -176,16 +182,23 @@ class TokenMatcher extends ConditionPluginBase implements ContainerFactoryPlugin
    */
   protected function getTokenData() {
     $token_data = [];
+    $token_types = $this->getContentTokenTypes();
+    foreach ($token_types as $entity_type => $token_type) {
+        if ($entity = $this->getPseudoContextValue($entity_type)) {
+          $token_data[$token_type] = $entity;
+        }
+    }
+    return $token_data;
+  }
+  protected function getContentTokenTypes() {
+    $token_types = [];
     $allEntities = \Drupal::entityManager()->getDefinitions();
     foreach ($allEntities as $entity_type => $entity_type_info) {
       if ($entity_type_info instanceof ContentEntityType) {
-        if ($entity = $this->getPseudoContextValue($entity_type)) {
-          $token_type = $this->getTokenType($entity_type_info);
-          $token_data[$token_type] = $entity;
+          $token_types[$entity_type] = $this->getTokenType($entity_type_info);
         }
       }
-    }
-    return $token_data;
+    return $token_types;
   }
 
   /**
