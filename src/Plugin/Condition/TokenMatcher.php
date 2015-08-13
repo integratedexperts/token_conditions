@@ -2,7 +2,7 @@
 
 /**
  * @file
- * Contains \Drupal\node\Plugin\Condition\TokenMatcher.
+ * Contains \Drupal\token_conditions\Plugin\Condition\TokenMatcher.
  *
  * @todo Is there a way to request a generic ContentEntity context?
  */
